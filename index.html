@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UIA Field Calculator</title>
+  <style>
+    :root {
+      --bg-color: #f2f2f7;
+      --card-bg: #ffffff;
+      --text-color: #1c1c1e;
+      --accent-blue: #007aff;
+      --accent-red: #ff3b30;
+      --border-color: #e5e5ea;
+    }
+
+    /* Support for native system Dark Mode in the field */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1c1c1e;
+        --card-bg: #2c2c2e;
+        --text-color: #ffffff;
+        --border-color: #3a3a3c;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h2 {
+      text-align: center;
+      margin: 8px 0;
+      font-weight: 600;
+      font-size: 22px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .input-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    input {
+      font-size: 18px;
+      width: 100px;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      text-align: right;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .result-box {
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .result-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8e8e93;
+    }
+
+    .result-val {
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin: 6px 0;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s ease;
+    }
+
+    /* Toxicity Alert State */
+    .result-val.toxic {
+      color: var(--accent-red);
+    }
+
+    .unit-label {
+      font-size: 14px;
+      color: #8e8e93;
+    }
+
+    .share-btn {
+      background-color: var(--accent-blue);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .share-btn:active {
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>UIA Calculator</h2>
+  
+  <div class="card">
+    <div class="input-row">
+      <label for="temp">Temperature (°C)</label>
+      <input type="number" id="temp" step="0.1" placeholder="0.0" inputmode="decimal">
+    </div>
+    
+    <div class="input-row">
+      <label for="ph">pH</label>
+      <input type="number" id="ph" step="0.01" placeholder="7.0" inputmode="decimal">
+    </div>
+    
+    <div class="input-row">
+      <label for="ammonia">Total Ammonia (mg/L)</label>
+      <input type="number" id="ammonia" step="0.01" placeholder="0.00" inputmode="decimal">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="result-box">
+      <div class="result-label">Unionized Ammonia (UIA)</div>
+      <div class="result-val" id="uia-result">0.0000</div>
+      <div class="unit-label">mg/L (ppm)</div>
+    </div>
+    
+    <button class="share-btn" onclick="nativeExport()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+      Share Report
+    </button>
+  </div>
+</div>
+
+<script>
+  const tempInput = document.getElementById('temp');
+  const phInput = document.getElementById('ph');
+  const ammoniaInput = document.getElementById('ammonia');
+  const resultDisplay = document.getElementById('uia-result');
+
+  // Real-time calculation loop
+  [tempInput, phInput, ammoniaInput].forEach(input => {
+    input.addEventListener('input', runCalculations);
+  });
+
+  function runCalculations() {
+    const tempC = parseFloat(tempInput.value);
+    const pH = parseFloat(phInput.value);
+    const ammonia = parseFloat(ammoniaInput.value);
+
+    if (isNaN(tempC) || isNaN(pH) || isNaN(ammonia)) {
+      resultDisplay.innerText = "0.0000";
+      resultDisplay.classList.remove('toxic');
+      return;
+    }
+
+    // --- Math formulas provided ---
+    const T_kelvin = tempC + 273.15;
+    const pKa = 0.0901821 + (2729.92 / T_kelvin);
+    const f = 1 / (Math.pow(10, (pKa - pH)) + 1);
+    const uia = f * ammonia;
+
+    resultDisplay.innerText = uia.toFixed(4);
+
+    // Dynamic warning color swap if toxicity threshold is passed (> 0.02 mg/L)
+    if (uia >= 0.02) {
+      resultDisplay.classList.add('toxic');
+    } else {
+      resultDisplay.classList.remove('toxic');
+    }
+  }
+
+  /**
+   * Native Device Mobile Share Integration
+   * Seamlessly builds and feeds a physical CSV data object directly into iOS/Android native sharing modules
+   */
+  async function nativeExport() {
+    const temp = tempInput.value;
+    const ph = phInput.value;
+    const amm = ammoniaInput.value;
+    const uia = resultDisplay.innerText;
+
+    if (uia === "0.0000") {
+      alert("Please enter field values before trying to share data.");
+      return;
+    }
+
+    const shareText = `Water Quality Record:\n• Temp: ${temp}°C\n• pH: ${ph}\n• Total Ammonia: ${amm} mg/L\n• Unionized Ammonia: ${uia} mg/L`;
+    
+    // Construct the physical CSV document natively inside the mobile browser window
+    const csvContent = `Parameter,Value\nTemperature (C),${temp}\npH,${ph}\nTotal Ammonia (mg/L),${amm}\nUnionized Ammonia (mg/L),${uia}\nTimestamp,${new Date().toLocaleString()}`;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvFile = new File([blob], `UIA_Report_${new Date().toISOString().slice(0,10)}.csv`, { type: 'text/csv' });
+
+    // Leverage standard Web Share API 
+    if (navigator.canShare && navigator.canShare({ files: [csvFile] })) {
+      try {
+        await navigator.share({
+          title: 'Field Ammonia Log',
+          text: shareText,
+          files: [csvFile]
+        });
+      } catch (err) {
+        console.log("Sharing interface closed: ", err);
+      }
+    } else {
+      // Direct text-only fallback option for older legacy Android/iOS browser versions
+      try {
+        await navigator.share({
+          title: 'Field Ammonia Log',
+          text: shareText
+        });
+      } catch (err) {
+        alert("Your web browser version doesn't support system share sheets. Copy values manually.");
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
