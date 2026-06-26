@@ -12,10 +12,10 @@
       --accent-blue: #007aff;
       --border-color: #e5e5ea;
       
-      /* Dynamic States - Defaults */
-      --status-bg: #e5f6ed; /* Default safe green background for results */
-      --status-text: #1a7f37;
-      --status-border: #a2e9c1;
+      /* Dynamic States - Safe Defaults (Green Card) */
+      --status-bg: #e8f5e9;       /* Soft Green Card Fill */
+      --status-text: #1b5e20;     /* Deep Green Text for readability */
+      --status-border: #a5d6a7;   /* Safe Green Card Border */
     }
 
     body {
@@ -27,21 +27,22 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      transition: background-color 0.4s ease; /* Smooth fullscreen color transition */
+      transition: background-color 0.4s ease;
     }
 
-    /* Screen State Styles */
+    /* Full-screen subtle tint matching the status */
     body.safe-zone {
-      background-color: #e8f5e9; /* Light green screen background */
+      background-color: #f1f8e9; 
     }
     body.danger-zone {
-      background-color: #ffebee; /* Light red screen background */
+      background-color: #fdf2f2; 
     }
 
+    /* CSS variable override engine when threshold is breached */
     body.danger-zone :root {
-      --status-bg: #fce8e6;
-      --status-text: #d93025;
-      --status-border: #f8b4b0;
+      --status-bg: #ffebee;       /* Full Red Card Fill */
+      --status-text: #c62828;     /* Deep Crimson Text */
+      --status-border: #ef9a9a;   /* Danger Red Card Border */
     }
 
     .container {
@@ -69,6 +70,13 @@
       gap: 14px;
     }
 
+    /* THE CALCULATION CARD: Controlled entirely by our dynamic status tokens */
+    .card.result-card {
+      background-color: var(--status-bg);
+      border: 1px solid var(--status-border);
+      transition: background-color 0.4s ease, border-color 0.4s ease;
+    }
+
     .input-row {
       display: flex;
       justify-content: space-between;
@@ -87,14 +95,13 @@
       font-weight: 500;
     }
 
-    /* Keying optimization: Text type blocks scrolling wheels entirely while inputmode keeps standard numpad active */
     input {
       font-size: 18px;
       width: 120px;
       padding: 8px;
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      background-color: #f2f2f7;
+      background-color: var(--bg-color);
       color: var(--text-color);
       text-align: right;
     }
@@ -102,31 +109,28 @@
     input:focus {
       outline: none;
       border-color: var(--accent-blue);
-      background-color: #ffffff;
+      background-color: var(--card-bg);
     }
 
     .result-box {
       text-align: center;
-      padding: 20px 0;
-      border-radius: 8px;
-      background-color: var(--status-bg);
-      border: 1px solid var(--status-border);
-      transition: all 0.4s ease;
+      padding: 10px 0;
     }
 
     .result-label {
       font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--text-color);
-      opacity: 0.7;
+      color: var(--status-text);
+      opacity: 0.8;
+      font-weight: 600;
     }
 
     .result-val {
-      font-size: 46px;
-      font-weight: 700;
+      font-size: 48px;
+      font-weight: 800;
       color: var(--status-text);
-      margin: 6px 0;
+      margin: 8px 0;
       font-variant-numeric: tabular-nums;
       transition: color 0.4s ease;
     }
@@ -134,7 +138,8 @@
     .unit-label {
       font-size: 14px;
       color: var(--status-text);
-      font-weight: 500;
+      font-weight: 600;
+      opacity: 0.9;
     }
 
     .share-btn {
@@ -151,7 +156,7 @@
       align-items: center;
       gap: 8px;
       margin-top: 4px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 10px rgba(0,122,255,0.15);
     }
 
     .share-btn:active {
@@ -159,7 +164,7 @@
     }
   </style>
 </head>
-<body>
+<body class="safe-zone">
 
 <div class="container">
   <h2>UIA Field Calculator</h2>
@@ -181,7 +186,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card result-card">
     <div class="result-box">
       <div class="result-label">Unionized Ammonia (UIA)</div>
       <div class="result-val" id="uia-result">0.0000</div>
@@ -202,7 +207,7 @@
   const resultDisplay = document.getElementById('uia-result');
   const bodyElement = document.body;
 
-  // Real-time calculation loop
+  // Real-time listener loops
   [tempInput, phInput, ammoniaInput].forEach(input => {
     input.addEventListener('input', runCalculations);
   });
@@ -212,15 +217,15 @@
     const pH = parseFloat(phInput.value);
     const ammonia = parseFloat(ammoniaInput.value);
 
-    // Reset layout interface structure if any box is wiped empty
+    // Reset styles cleanly if inputs are wiped
     if (isNaN(tempC) || isNaN(pH) || isNaN(ammonia)) {
       resultDisplay.innerText = "0.0000";
-      bodyElement.className = ''; // Remove color classes
-      updateStatusColors('#e5f6ed', '#1a7f37', '#a2e9c1');
+      bodyElement.className = 'safe-zone';
+      updateStatusVariables('#e8f5e9', '#1b5e20', '#a5d6a7');
       return;
     }
 
-    // --- Math formulas provided ---
+    // Math Engine
     const T_kelvin = tempC + 273.15;
     const pKa = 0.0901821 + (2729.92 / T_kelvin);
     const f = 1 / (Math.pow(10, (pKa - pH)) + 1);
@@ -228,18 +233,17 @@
 
     resultDisplay.innerText = uia.toFixed(4);
 
-    // Dynamic Threshold Check (0.019 mg/L)
+    // Dynamic Threshold Trigger (0.019 mg/L)
     if (uia > 0.019) {
       bodyElement.className = 'danger-zone';
-      updateStatusColors('#fce8e6', '#d93025', '#f8b4b0');
+      updateStatusVariables('#ffebee', '#c62828', '#ef9a9a');
     } else {
       bodyElement.className = 'safe-zone';
-      updateStatusColors('#e5f6ed', '#1a7f37', '#a2e9c1');
+      updateStatusVariables('#e8f5e9', '#1b5e20', '#a5d6a7');
     }
   }
 
-  // Helper routine to adjust CSS parameters on the fly
-  function updateStatusColors(bg, text, border) {
+  function updateStatusVariables(bg, text, border) {
     document.documentElement.style.setProperty('--status-bg', bg);
     document.documentElement.style.setProperty('--status-text', text);
     document.documentElement.style.setProperty('--status-border', border);
@@ -278,7 +282,7 @@
       try {
         await navigator.share({ title: 'Field Ammonia Log', text: shareText });
       } catch (err) {
-        alert("Sharing not supported on this browser context configuration.");
+        alert("Sharing not supported on this browser device layout.");
       }
     }
   }
