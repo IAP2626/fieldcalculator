@@ -13,9 +13,9 @@
       --border-color: #e5e5ea;
       
       /* Dynamic States - Safe Defaults (Green Card) */
-      --status-bg: #e8f5e9;       /* Soft Green Card Fill */
-      --status-text: #1b5e20;     /* Deep Green Text for readability */
-      --status-border: #a5d6a7;   /* Safe Green Card Border */
+      --status-bg: #e8f5e9;       
+      --status-text: #1b5e20;     
+      --status-border: #a5d6a7;   
     }
 
     body {
@@ -30,7 +30,6 @@
       transition: background-color 0.4s ease;
     }
 
-    /* Full-screen subtle tint matching the status */
     body.safe-zone {
       background-color: #f1f8e9; 
     }
@@ -38,11 +37,10 @@
       background-color: #fdf2f2; 
     }
 
-    /* CSS variable override engine when threshold is breached */
     body.danger-zone :root {
-      --status-bg: #ffebee;       /* Full Red Card Fill */
-      --status-text: #c62828;     /* Deep Crimson Text */
-      --status-border: #ef9a9a;   /* Danger Red Card Border */
+      --status-bg: #ffebee;       
+      --status-text: #c62828;     
+      --status-border: #ef9a9a;   
     }
 
     .container {
@@ -70,7 +68,6 @@
       gap: 14px;
     }
 
-    /* THE CALCULATION CARD: Controlled entirely by our dynamic status tokens */
     .card.result-card {
       background-color: var(--status-bg);
       border: 1px solid var(--status-border);
@@ -142,9 +139,15 @@
       opacity: 0.9;
     }
 
-    .share-btn {
-      background-color: var(--accent-blue);
-      color: white;
+    /* Dual Button Layout Alignment Wrapper */
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .action-btn {
       font-size: 16px;
       font-weight: 600;
       padding: 14px;
@@ -154,12 +157,28 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 8px;
-      margin-top: 4px;
-      box-shadow: 0 4px 10px rgba(0,122,255,0.15);
+      gap: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
 
-    .share-btn:active {
+    .share-btn {
+      background-color: var(--accent-blue);
+      color: white;
+    }
+
+    .reset-btn {
+      background-color: #aeaeae;
+      color: white;
+    }
+
+    /* Dark Mode visual adjustment helper for the secondary reset element */
+    @media (prefers-color-scheme: dark) {
+      .reset-btn {
+        background-color: #48484a;
+      }
+    }
+
+    .action-btn:active {
       opacity: 0.7;
     }
   </style>
@@ -172,17 +191,17 @@
   <div class="card">
     <div class="input-row">
       <label for="temp">Temperature (°C)</label>
-      <input type="text" id="temp" placeholder="0.0" inputmode="decimal">
+      <input type="text" id="temp" placeholder="0.0" inputmode="decimal" autocomplete="off">
     </div>
     
     <div class="input-row">
       <label for="ph">pH</label>
-      <input type="text" id="ph" placeholder="7.0" inputmode="decimal">
+      <input type="text" id="ph" placeholder="7.0" inputmode="decimal" autocomplete="off">
     </div>
     
     <div class="input-row">
       <label for="ammonia">Total Ammonia (mg/L)</label>
-      <input type="text" id="ammonia" placeholder="0.00" inputmode="decimal">
+      <input type="text" id="ammonia" placeholder="0.00" inputmode="decimal" autocomplete="off">
     </div>
   </div>
 
@@ -193,10 +212,17 @@
       <div class="unit-label">mg/L (ppm)</div>
     </div>
     
-    <button class="share-btn" onclick="nativeExport()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
-      Share Report
-    </button>
+    <div class="btn-group">
+      <button class="action-btn reset-btn" onclick="resetCalculator()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Reset
+      </button>
+      
+      <button class="action-btn share-btn" onclick="nativeExport()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+        Share
+      </button>
+    </div>
   </div>
 </div>
 
@@ -212,12 +238,16 @@
     input.addEventListener('input', runCalculations);
   });
 
+  // Automatically reset inputs entirely on absolute document load sequences
+  window.addEventListener('load', () => {
+    resetCalculator();
+  });
+
   function runCalculations() {
     const tempC = parseFloat(tempInput.value);
     const pH = parseFloat(phInput.value);
     const ammonia = parseFloat(ammoniaInput.value);
 
-    // Reset styles cleanly if inputs are wiped
     if (isNaN(tempC) || isNaN(pH) || isNaN(ammonia)) {
       resultDisplay.innerText = "0.0000";
       bodyElement.className = 'safe-zone';
@@ -241,6 +271,18 @@
       bodyElement.className = 'safe-zone';
       updateStatusVariables('#e8f5e9', '#1b5e20', '#a5d6a7');
     }
+  }
+
+  /**
+   * Cleans values and styles back to structural safe baseline benchmarks
+   */
+  function resetCalculator() {
+    tempInput.value = '';
+    phInput.value = '';
+    ammoniaInput.value = '';
+    resultDisplay.innerText = "0.0000";
+    bodyElement.className = 'safe-zone';
+    updateStatusVariables('#e8f5e9', '#1b5e20', '#a5d6a7');
   }
 
   function updateStatusVariables(bg, text, border) {
@@ -282,7 +324,7 @@
       try {
         await navigator.share({ title: 'Field Ammonia Log', text: shareText });
       } catch (err) {
-        alert("Sharing not supported on this browser device layout.");
+        alert("Sharing not supported on this browser profile configuration.");
       }
     }
   }
